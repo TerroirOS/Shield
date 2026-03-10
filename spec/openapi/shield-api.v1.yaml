@@ -1,0 +1,345 @@
+openapi: 3.0.3
+info:
+  title: Terroir Shield API
+  version: 1.0.0-draft
+  description: |
+    Planned API surface for Shield resilience workflows.
+    Status: Planned / not launched.
+  license:
+    name: MIT
+    url: https://github.com/TerroirOS/Shield/blob/main/LICENSE
+servers:
+  - url: https://api.shield.terroiros.org
+    description: Placeholder base URL for documentation only.
+tags:
+  - name: Events
+    description: Climate event ingestion and retrieval.
+  - name: Triggers
+    description: Trigger evaluation for program rules.
+  - name: Payouts
+    description: Response and payout simulation outputs.
+  - name: Reports
+    description: Public transparency reporting endpoints.
+security:
+  - bearerAuth: []
+paths:
+  /v1/events/ingest:
+    post:
+      tags: [Events]
+      summary: Ingest a climate event
+      operationId: ingestClimateEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClimateEvent'
+            example:
+              event_id: evt_20260310_0001
+              program_id: kakheti_hail_relief_2026
+              location:
+                type: Point
+                coordinates: [45.8011, 41.7167]
+              observed_at: '2026-03-09T14:30:00Z'
+              data_source: NOAA_CDO
+              hazard_type: HAIL
+              severity: 0.78
+              evidence_refs:
+                - type: dataset
+                  uri: https://www.ncei.noaa.gov/cdo-web/webservices/v2
+              integrity_hash: sha256:73d0105ecff72fd8bb2f8445b70a7933686ee3f2f31f8d90f9db95e11ba6db72
+              status: RECEIVED
+      responses:
+        '202':
+          description: Event accepted for normalization and review
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        '400':
+          description: Invalid payload
+        '401':
+          description: Unauthorized
+  /v1/events/{event_id}:
+    get:
+      tags: [Events]
+      summary: Retrieve an ingested climate event
+      operationId: getClimateEvent
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimateEvent'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Event not found
+  /v1/triggers/evaluate:
+    post:
+      tags: [Triggers]
+      summary: Evaluate trigger logic for an event
+      operationId: evaluateTrigger
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriggerEvaluationRequest'
+      responses:
+        '200':
+          description: Trigger evaluation complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriggerEvaluation'
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+  /v1/payouts/simulate:
+    post:
+      tags: [Payouts]
+      summary: Simulate payout recommendation for an evaluation
+      operationId: simulatePayout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayoutSimulationRequest'
+      responses:
+        '200':
+          description: Payout simulation complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutDecision'
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+  /v1/reports/public:
+    get:
+      tags: [Reports]
+      summary: Get public transparency report for an event
+      operationId: getPublicReport
+      parameters:
+        - name: event_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public report generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicReport'
+        '400':
+          description: Missing or invalid query parameter
+        '401':
+          description: Unauthorized
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    GeoPoint:
+      type: object
+      required: [type, coordinates]
+      properties:
+        type:
+          type: string
+          enum: [Point]
+        coordinates:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            type: number
+    EvidenceRef:
+      type: object
+      required: [type, uri]
+      properties:
+        type:
+          type: string
+        uri:
+          type: string
+          format: uri
+    ClimateEvent:
+      type: object
+      required:
+        - event_id
+        - program_id
+        - location
+        - observed_at
+        - data_source
+        - hazard_type
+        - severity
+        - evidence_refs
+        - integrity_hash
+        - status
+      properties:
+        event_id:
+          type: string
+        program_id:
+          type: string
+        location:
+          $ref: '#/components/schemas/GeoPoint'
+        observed_at:
+          type: string
+          format: date-time
+        data_source:
+          type: string
+        hazard_type:
+          type: string
+          enum: [HAIL, FROST, DROUGHT, HEAT, RAINFALL, WIND]
+        severity:
+          type: number
+          minimum: 0
+          maximum: 1
+        evidence_refs:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceRef'
+        integrity_hash:
+          type: string
+        status:
+          type: string
+          enum: [RECEIVED, NORMALIZED, REJECTED, REVIEW_REQUIRED]
+    IngestResponse:
+      type: object
+      required: [accepted, event_id, status]
+      properties:
+        accepted:
+          type: boolean
+        event_id:
+          type: string
+        status:
+          type: string
+    TriggerEvaluationRequest:
+      type: object
+      required: [event_id, program_id, rule_version]
+      properties:
+        event_id:
+          type: string
+        program_id:
+          type: string
+        rule_version:
+          type: string
+    TriggerEvaluation:
+      type: object
+      required:
+        - evaluation_id
+        - event_id
+        - program_id
+        - rule_version
+        - trigger_met
+        - reason_codes
+        - basis_risk_flag
+        - requires_manual_review
+        - status
+      properties:
+        evaluation_id:
+          type: string
+        event_id:
+          type: string
+        program_id:
+          type: string
+        rule_version:
+          type: string
+        trigger_met:
+          type: boolean
+        reason_codes:
+          type: array
+          items:
+            type: string
+        basis_risk_flag:
+          type: boolean
+        requires_manual_review:
+          type: boolean
+        status:
+          type: string
+          enum: [EVALUATED, REVIEW_REQUIRED]
+    PayoutSimulationRequest:
+      type: object
+      required: [evaluation_id, event_id, program_id]
+      properties:
+        evaluation_id:
+          type: string
+        event_id:
+          type: string
+        program_id:
+          type: string
+    PayoutDecision:
+      type: object
+      required:
+        - decision_id
+        - evaluation_id
+        - event_id
+        - program_id
+        - rule_version
+        - recommended_amount
+        - currency
+        - basis_risk_flag
+        - requires_manual_review
+        - appeal_window_days
+        - status
+      properties:
+        decision_id:
+          type: string
+        evaluation_id:
+          type: string
+        event_id:
+          type: string
+        program_id:
+          type: string
+        rule_version:
+          type: string
+        recommended_amount:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        basis_risk_flag:
+          type: boolean
+        requires_manual_review:
+          type: boolean
+        appeal_window_days:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [SIMULATED, REVIEW_REQUIRED, FINALIZED]
+    PublicReport:
+      type: object
+      required: [event_id, program_id, rule_version, status, generated_at]
+      properties:
+        event_id:
+          type: string
+        program_id:
+          type: string
+        rule_version:
+          type: string
+        status:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+        totals:
+          type: object
+          additionalProperties:
+            type: number

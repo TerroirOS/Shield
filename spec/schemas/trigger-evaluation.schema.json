@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/TerroirOS/Shield/spec/schemas/trigger-evaluation.schema.json",
+  "title": "TriggerEvaluation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evaluation_id",
+    "event_id",
+    "program_id",
+    "rule_version",
+    "trigger_met",
+    "reason_codes",
+    "basis_risk_flag",
+    "requires_manual_review",
+    "status"
+  ],
+  "properties": {
+    "evaluation_id": { "type": "string", "minLength": 3 },
+    "event_id": { "type": "string", "minLength": 3 },
+    "program_id": { "type": "string", "minLength": 3 },
+    "rule_version": { "type": "string", "minLength": 1 },
+    "trigger_met": { "type": "boolean" },
+    "reason_codes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "basis_risk_flag": { "type": "boolean" },
+    "requires_manual_review": { "type": "boolean" },
+    "status": {
+      "type": "string",
+      "enum": ["EVALUATED", "REVIEW_REQUIRED"]
+    }
+  }
+}

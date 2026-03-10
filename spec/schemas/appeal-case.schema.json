@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/TerroirOS/Shield/spec/schemas/appeal-case.schema.json",
+  "title": "AppealCase",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "appeal_id",
+    "decision_id",
+    "opened_at",
+    "opened_by",
+    "reason",
+    "resolution_status"
+  ],
+  "properties": {
+    "appeal_id": { "type": "string", "minLength": 3 },
+    "decision_id": { "type": "string", "minLength": 3 },
+    "opened_at": { "type": "string", "format": "date-time" },
+    "opened_by": { "type": "string", "minLength": 1 },
+    "reason": { "type": "string", "minLength": 3 },
+    "resolution_status": {
+      "type": "string",
+      "enum": ["OPEN", "UNDER_REVIEW", "UPHELD", "OVERTURNED", "CLOSED"]
+    },
+    "resolution_notes": { "type": "string" }
+  }
+}

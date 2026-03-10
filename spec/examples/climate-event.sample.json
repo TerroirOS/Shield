@@ -1,0 +1,20 @@
+{
+  "event_id": "evt_20260310_0001",
+  "program_id": "kakheti_hail_relief_2026",
+  "location": {
+    "type": "Point",
+    "coordinates": [45.8011, 41.7167]
+  },
+  "observed_at": "2026-03-09T14:30:00Z",
+  "data_source": "NOAA_CDO",
+  "hazard_type": "HAIL",
+  "severity": 0.78,
+  "evidence_refs": [
+    {
+      "type": "dataset",
+      "uri": "https://www.ncei.noaa.gov/cdo-web/webservices/v2"
+    }
+  ],
+  "integrity_hash": "sha256:73d0105ecff72fd8bb2f8445b70a7933686ee3f2f31f8d90f9db95e11ba6db72",
+  "status": "RECEIVED"
+}

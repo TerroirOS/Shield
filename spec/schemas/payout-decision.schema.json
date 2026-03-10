@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/TerroirOS/Shield/spec/schemas/payout-decision.schema.json",
+  "title": "PayoutDecision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "decision_id",
+    "evaluation_id",
+    "event_id",
+    "program_id",
+    "rule_version",
+    "recommended_amount",
+    "currency",
+    "basis_risk_flag",
+    "requires_manual_review",
+    "appeal_window_days",
+    "status"
+  ],
+  "properties": {
+    "decision_id": { "type": "string", "minLength": 3 },
+    "evaluation_id": { "type": "string", "minLength": 3 },
+    "event_id": { "type": "string", "minLength": 3 },
+    "program_id": { "type": "string", "minLength": 3 },
+    "rule_version": { "type": "string", "minLength": 1 },
+    "recommended_amount": { "type": "number", "minimum": 0 },
+    "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "basis_risk_flag": { "type": "boolean" },
+    "requires_manual_review": { "type": "boolean" },
+    "appeal_window_days": { "type": "integer", "minimum": 1, "maximum": 90 },
+    "status": {
+      "type": "string",
+      "enum": ["SIMULATED", "REVIEW_REQUIRED", "FINALIZED"]
+    }
+  }
+}

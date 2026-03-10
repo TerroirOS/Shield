@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/TerroirOS/Shield/spec/schemas/vineyard-enrollment.schema.json",
+  "title": "VineyardEnrollment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "enrollment_id",
+    "program_id",
+    "participant_ref",
+    "location",
+    "coverage_window",
+    "status"
+  ],
+  "properties": {
+    "enrollment_id": { "type": "string", "minLength": 3 },
+    "program_id": { "type": "string", "minLength": 3 },
+    "participant_ref": { "type": "string", "minLength": 3 },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "coordinates"],
+      "properties": {
+        "type": { "type": "string", "const": "Point" },
+        "coordinates": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "type": "number" }
+        }
+      }
+    },
+    "coverage_window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "type": "string", "format": "date" },
+        "end": { "type": "string", "format": "date" }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["PENDING", "ACTIVE", "SUSPENDED", "CLOSED"]
+    }
+  }
+}
