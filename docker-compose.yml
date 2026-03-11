@@ -1,0 +1,150 @@
+services:
+  shield-dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+    container_name: shield-dashboard
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+    depends_on:
+      - shield-api
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  shield-api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: shield-api
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgres://shield:shield@postgres:5432/shield
+      - REDIS_URL=redis://redis:6379
+      - OIDC_ISSUER_URL=http://keycloak:8080/realms/shield
+      - OIDC_JWKS_URI=http://keycloak:8080/realms/shield/protocol/openid-connect/certs
+      - AUTH_DEV_MODE=true
+      - API_PORT=8080
+    depends_on:
+      - postgres
+      - redis
+      - keycloak
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  shield-worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    container_name: shield-worker
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - API_BASE_URL=http://shield-api:8080
+      - INTERNAL_JOB_TOKEN=dev-internal-token
+    depends_on:
+      - redis
+      - shield-api
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  postgres:
+    image: postgres:16
+    container_name: shield-postgres
+    environment:
+      POSTGRES_DB: shield
+      POSTGRES_USER: shield
+      POSTGRES_PASSWORD: shield
+    ports:
+      - "5432:5432"
+    volumes:
+      - shield_postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: shield-redis
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:RELEASE.2025-02-07T23-21-09Z
+    container_name: shield-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - shield_minio_data:/data
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: shield-keycloak
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./infra/docker/keycloak:/opt/keycloak/data/import
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.102.1
+    container_name: shield-otel-collector
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./infra/docker/otel/config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: shield-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    volumes:
+      - ./infra/docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: shield-loki
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./infra/docker/loki/config.yaml:/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: shield-grafana
+    ports:
+      - "3002:3000"
+    depends_on:
+      - prometheus
+      - loki
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - ./infra/docker/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./infra/docker/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+
+volumes:
+  shield_postgres_data:
+  shield_minio_data:

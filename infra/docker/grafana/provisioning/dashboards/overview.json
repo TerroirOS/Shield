@@ -1,0 +1,31 @@
+{
+  "id": null,
+  "uid": "shield-overview",
+  "title": "Shield API Overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Ingested Events",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(shield_events_ingested_total[5m])",
+          "legendFormat": "events/sec"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP Request Duration P95",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(shield_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    }
+  ]
+}

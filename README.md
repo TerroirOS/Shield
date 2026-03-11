@@ -1,102 +1,82 @@
 # Terroir Shield
 
-Terroir Shield is the resilience module of TerroirOS, extending provenance systems with climate-risk visibility, event tracking, and future support for transparent response and payout workflows.
+Terroir Shield is the climate-response resilience module in TerroirOS.
+This repository now includes a working v1 local stack:
 
-Status: Planned / not launched.
+- `apps/dashboard`: command-center operations UI (Next.js 14)
+- `apps/api`: Fastify API with OIDC/RBAC hooks and audit workflow
+- `apps/worker`: BullMQ worker for evaluations and notifications
+- `packages/domain`: shared domain types, schemas, trigger/payout logic
+- `packages/connectors`: Trace/weather/commitment/treasury/notification adapters
+- `packages/ui`: dashboard UI primitives and design tokens
+- `infra/docker`: local runtime for Postgres, Redis, MinIO, Keycloak, OTel, Prometheus, Loki, Grafana
 
-## Repository Purpose
+## Runtime Modes
 
-This repository provides a documentation-first and specification-first foundation for Shield.
-It does not ship production services yet.
+- `MOCK` (default): mock connectors for local development
+- `HYBRID`: live external connectors (stubs wired, adapters ready)
+- `TESTNET`: commitment adapter path reserved for testnet anchoring
 
-## What Is Included
-
-- Architecture and lifecycle documentation for the planned module.
-- Governance and controls model for auditable decisioning.
-- OpenAPI and JSON Schema specification pack for integration planning.
-- Source-backed research bibliography and evidence matrix.
-- Contributor workflows, issue templates, and CI checks.
-
-## Quick Links
-
-- [Documentation Index](docs/index.md)
-- [Overview](docs/overview.md)
-- [Architecture](docs/architecture.md)
-- [Domain Model](docs/domain-model.md)
-- [Event Lifecycle](docs/event-lifecycle.md)
-- [Trigger and Payout Logic](docs/trigger-payout-logic.md)
-- [Governance and Controls](docs/governance-and-controls.md)
-- [Integration Guide](docs/integration-guide.md)
-- [Implementation Roadmap](docs/implementation-roadmap.md)
-- [Glossary](docs/glossary.md)
-- [Research Bibliography](docs/research/bibliography.md)
-- [Evidence Matrix](docs/research/evidence-matrix.md)
-
-## Specification Pack
-
-- [OpenAPI v1](spec/openapi/shield-api.v1.yaml)
-- [Schemas](spec/schemas/)
-- [Examples](spec/examples/)
-
-Core planned schema types:
-
-- `VineyardEnrollment`
-- `ClimateEvent`
-- `TriggerEvaluation`
-- `PayoutDecision`
-- `AppealCase`
-
-Standardized event-envelope fields used across decision artifacts:
-
-- `event_id`
-- `program_id`
-- `location` (GeoJSON-compatible)
-- `observed_at` (ISO-8601)
-- `data_source`
-- `evidence_refs`
-- `integrity_hash`
-- `status`
-
-Governance flags included in decisioning artifacts:
-
-- `rule_version`
-- `basis_risk_flag`
-- `requires_manual_review`
-- `appeal_window_days`
-
-## Scope Boundaries
-
-Shield is intended for rapid response and auditable program execution.
-It is not represented here as a replacement for regulated insurance products.
-
-## Development
-
-### Prerequisites
+## Prerequisites
 
 - Node.js 20+
+- Docker + Docker Compose
 
-### Install
+## Quick Start
 
 ```bash
+cp .env.example .env
 npm install
+docker compose up --build
 ```
 
-### Validate docs/specs
+Services:
+
+- Dashboard: [http://localhost:3000](http://localhost:3000)
+- API: [http://localhost:8080](http://localhost:8080)
+- API Docs: [http://localhost:8080/docs](http://localhost:8080/docs)
+- Keycloak: [http://localhost:8081](http://localhost:8081)
+- MinIO: [http://localhost:9001](http://localhost:9001)
+- Prometheus: [http://localhost:9090](http://localhost:9090)
+- Grafana: [http://localhost:3002](http://localhost:3002)
+
+## Local Development (without Docker for app code)
+
+```bash
+cp .env.example .env
+npm install
+npm run dev
+```
+
+This runs API (`:8080`), worker, and dashboard (`:3000`) in parallel.
+
+## API Surface (v1)
+
+- `POST /v1/events/weather`
+- `POST /v1/programs/:id/trigger-evaluations`
+- `POST /v1/decisions/preview`
+- `POST /v1/decisions/:id/approve`
+- `POST /v1/decisions/:id/export`
+- `GET /v1/cases`
+- `GET /v1/cases/:id`
+- `GET /v1/reports/public`
+- `GET /v1/basis-risk/metrics`
+
+## Docs + Specs
+
+- [Documentation Index](docs/index.md)
+- [OpenAPI v1](spec/openapi/shield-api.v1.yaml)
+- [JSON Schemas](spec/schemas/)
+
+## Validation and Tests
 
 ```bash
 npm run validate
+npm test
 ```
 
-Validation includes:
+## Notes
 
-- Markdown lint
-- Local markdown link checks
-- OpenAPI lint
-- JSON Schema validation for examples
-
-## Governance Docs
-
-- [Contributing](CONTRIBUTING.md)
-- [Security Policy](SECURITY.md)
-- [Code of Conduct](CODE_OF_CONDUCT.md)
-- [Changelog](CHANGELOG.md)
+- Dev auth uses `AUTH_DEV_MODE=true` and `x-user-role` headers (`ops`, `auditor`, `admin`).
+- Public reporting is aggregated and non-PII by default.
+- Counterfeit workflows remain out of v1 scope.

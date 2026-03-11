@@ -1,345 +1,421 @@
 openapi: 3.0.3
 info:
   title: Terroir Shield API
-  version: 1.0.0-draft
+  version: 1.0.0
   description: |
-    Planned API surface for Shield resilience workflows.
-    Status: Planned / not launched.
-  license:
-    name: MIT
-    url: https://github.com/TerroirOS/Shield/blob/main/LICENSE
+    Shield v1 climate-response operations API.
+    Includes weather event intake, trigger evaluation, decision workflow,
+    case management, basis-risk metrics, and public reporting.
 servers:
-  - url: https://api.shield.terroiros.org
-    description: Placeholder base URL for documentation only.
+  - url: http://localhost:8080
+    description: Local development server
 tags:
   - name: Events
-    description: Climate event ingestion and retrieval.
   - name: Triggers
-    description: Trigger evaluation for program rules.
-  - name: Payouts
-    description: Response and payout simulation outputs.
+  - name: Decisions
+  - name: Cases
   - name: Reports
-    description: Public transparency reporting endpoints.
+  - name: Basis Risk
+
 security:
   - bearerAuth: []
+
 paths:
-  /v1/events/ingest:
+  /v1/events/weather:
     post:
       tags: [Events]
-      summary: Ingest a climate event
-      operationId: ingestClimateEvent
+      summary: Ingest a signed weather event packet
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ClimateEvent'
-            example:
-              event_id: evt_20260310_0001
-              program_id: kakheti_hail_relief_2026
-              location:
-                type: Point
-                coordinates: [45.8011, 41.7167]
-              observed_at: '2026-03-09T14:30:00Z'
-              data_source: NOAA_CDO
-              hazard_type: HAIL
-              severity: 0.78
-              evidence_refs:
-                - type: dataset
-                  uri: https://www.ncei.noaa.gov/cdo-web/webservices/v2
-              integrity_hash: sha256:73d0105ecff72fd8bb2f8445b70a7933686ee3f2f31f8d90f9db95e11ba6db72
-              status: RECEIVED
+              $ref: '#/components/schemas/WeatherEventPacket'
       responses:
         '202':
-          description: Event accepted for normalization and review
+          description: Event accepted
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/IngestResponse'
+                type: object
+                required: [accepted, eventId, status]
+                properties:
+                  accepted: { type: boolean }
+                  eventId: { type: string }
+                  status: { type: string }
         '400':
           description: Invalid payload
-        '401':
-          description: Unauthorized
-  /v1/events/{event_id}:
-    get:
-      tags: [Events]
-      summary: Retrieve an ingested climate event
-      operationId: getClimateEvent
-      parameters:
-        - name: event_id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Event found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ClimateEvent'
-        '401':
-          description: Unauthorized
-        '404':
-          description: Event not found
-  /v1/triggers/evaluate:
+
+  /v1/programs/{id}/trigger-evaluations:
     post:
       tags: [Triggers]
-      summary: Evaluate trigger logic for an event
-      operationId: evaluateTrigger
+      summary: Evaluate trigger rules for one enrollment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TriggerEvaluationRequest'
+              type: object
+              required: [eventId, enrollmentId]
+              properties:
+                eventId: { type: string }
+                enrollmentId: { type: string }
       responses:
         '200':
-          description: Trigger evaluation complete
+          description: Trigger and payout preview output
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TriggerEvaluation'
-        '400':
-          description: Invalid request
-        '401':
-          description: Unauthorized
-  /v1/payouts/simulate:
+                type: object
+                properties:
+                  evaluation:
+                    $ref: '#/components/schemas/TriggerEvaluation'
+                  decision:
+                    $ref: '#/components/schemas/PayoutDecision'
+                  caseRecord:
+                    $ref: '#/components/schemas/CaseRecord'
+
+  /v1/decisions/preview:
     post:
-      tags: [Payouts]
-      summary: Simulate payout recommendation for an evaluation
-      operationId: simulatePayout
+      tags: [Decisions]
+      summary: Read current payout preview and optional loss gap
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PayoutSimulationRequest'
+              type: object
+              required: [evaluationId]
+              properties:
+                evaluationId: { type: string }
+                reportedLoss: { type: number, minimum: 0 }
       responses:
         '200':
-          description: Payout simulation complete
+          description: Preview returned
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PayoutDecision'
-        '400':
-          description: Invalid request
-        '401':
-          description: Unauthorized
+                type: object
+                properties:
+                  decision:
+                    $ref: '#/components/schemas/PayoutDecision'
+                  reportedLoss: { type: number, nullable: true }
+                  gap: { type: number, nullable: true }
+
+  /v1/decisions/{id}/approve:
+    post:
+      tags: [Decisions]
+      summary: Approve payout decision and write audit record
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Decision approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  decision:
+                    $ref: '#/components/schemas/PayoutDecision'
+
+  /v1/decisions/{id}/export:
+    post:
+      tags: [Decisions]
+      summary: Export approved decision to treasury adapter
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Export payload generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutExportBatch'
+
+  /v1/cases:
+    get:
+      tags: [Cases]
+      summary: List operational cases
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [OPEN, UNDER_REVIEW, RESOLVED]
+        - in: query
+          name: severity
+          schema:
+            type: string
+            enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        - in: query
+          name: programId
+          schema: { type: string }
+      responses:
+        '200':
+          description: Case list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cases:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CaseRecord'
+
+  /v1/cases/{id}:
+    get:
+      tags: [Cases]
+      summary: Get full case detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Case detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  case:
+                    $ref: '#/components/schemas/CaseRecord'
+                  event:
+                    $ref: '#/components/schemas/WeatherEventPacket'
+                  enrollment:
+                    $ref: '#/components/schemas/EnrollmentRecord'
+                  decision:
+                    $ref: '#/components/schemas/PayoutDecision'
+                  audit:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditLogEntry'
+
   /v1/reports/public:
     get:
       tags: [Reports]
-      summary: Get public transparency report for an event
-      operationId: getPublicReport
+      summary: Generate aggregated non-PII transparency report
       parameters:
-        - name: event_id
-          in: query
-          required: true
-          schema:
-            type: string
+        - in: query
+          name: programId
+          schema: { type: string }
       responses:
         '200':
-          description: Public report generated
+          description: Public report
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PublicReport'
-        '400':
-          description: Missing or invalid query parameter
-        '401':
-          description: Unauthorized
+                type: object
+
+  /v1/basis-risk/metrics:
+    get:
+      tags: [Basis Risk]
+      summary: Return basis-risk metrics and history
+      parameters:
+        - in: query
+          name: programId
+          schema: { type: string }
+      responses:
+        '200':
+          description: Basis-risk metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  programId: { type: string }
+                  observations: { type: integer }
+                  averageExpectedGap: { type: number }
+                  latest:
+                    $ref: '#/components/schemas/BasisRiskSnapshot'
+                  history:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BasisRiskSnapshot'
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
   schemas:
-    GeoPoint:
+    ProgramConfig:
       type: object
-      required: [type, coordinates]
+      required: [programId, name, region, currency, payoutCap, thresholds, weights, effectiveFrom, effectiveTo, ruleVersion]
       properties:
-        type:
-          type: string
-          enum: [Point]
-        coordinates:
-          type: array
-          minItems: 2
-          maxItems: 2
-          items:
-            type: number
-    EvidenceRef:
+        programId: { type: string }
+        name: { type: string }
+        region: { type: string }
+        currency: { type: string }
+        payoutCap: { type: number }
+        thresholds:
+          type: object
+          required: [hailThreshold, frostThreshold, minTemperatureThreshold, droughtThreshold]
+          properties:
+            hailThreshold: { type: number }
+            frostThreshold: { type: number }
+            minTemperatureThreshold: { type: number }
+            droughtThreshold: { type: number }
+        weights:
+          type: object
+          required: [alpha, beta, gamma]
+          properties:
+            alpha: { type: number }
+            beta: { type: number }
+            gamma: { type: number }
+        effectiveFrom: { type: string, format: date }
+        effectiveTo: { type: string, format: date }
+        ruleVersion: { type: string }
+
+    EnrollmentRecord:
       type: object
-      required: [type, uri]
+      required: [enrollmentId, programId, participantRef, batchId, areaHectares, status, trustTier]
       properties:
-        type:
-          type: string
-        uri:
-          type: string
-          format: uri
-    ClimateEvent:
-      type: object
-      required:
-        - event_id
-        - program_id
-        - location
-        - observed_at
-        - data_source
-        - hazard_type
-        - severity
-        - evidence_refs
-        - integrity_hash
-        - status
-      properties:
-        event_id:
-          type: string
-        program_id:
-          type: string
-        location:
-          $ref: '#/components/schemas/GeoPoint'
-        observed_at:
-          type: string
-          format: date-time
-        data_source:
-          type: string
-        hazard_type:
-          type: string
-          enum: [HAIL, FROST, DROUGHT, HEAT, RAINFALL, WIND]
-        severity:
-          type: number
-          minimum: 0
-          maximum: 1
-        evidence_refs:
-          type: array
-          items:
-            $ref: '#/components/schemas/EvidenceRef'
-        integrity_hash:
-          type: string
+        enrollmentId: { type: string }
+        programId: { type: string }
+        participantRef: { type: string }
+        batchId: { type: string }
+        areaHectares: { type: number }
         status:
           type: string
-          enum: [RECEIVED, NORMALIZED, REJECTED, REVIEW_REQUIRED]
-    IngestResponse:
+          enum: [ACTIVE, PENDING, SUSPENDED, CLOSED]
+        trustTier:
+          type: string
+          enum: [SELF_ATTESTED, LAB_ATTESTED, AUTHORITY_ATTESTED]
+
+    WeatherEventPacket:
       type: object
-      required: [accepted, event_id, status]
+      required: [eventId, programId, hazardType, observedAt, hailIntensity, frostIndicator, minTemperature, droughtIndex, source, signature]
       properties:
-        accepted:
-          type: boolean
-        event_id:
+        eventId: { type: string }
+        programId: { type: string }
+        hazardType:
           type: string
-        status:
-          type: string
-    TriggerEvaluationRequest:
-      type: object
-      required: [event_id, program_id, rule_version]
-      properties:
-        event_id:
-          type: string
-        program_id:
-          type: string
-        rule_version:
-          type: string
+          enum: [HAIL, FROST, DROUGHT]
+        observedAt: { type: string, format: date-time }
+        hailIntensity: { type: number }
+        frostIndicator: { type: number }
+        minTemperature: { type: number }
+        droughtIndex: { type: number }
+        source: { type: string }
+        signature: { type: string }
+
     TriggerEvaluation:
       type: object
-      required:
-        - evaluation_id
-        - event_id
-        - program_id
-        - rule_version
-        - trigger_met
-        - reason_codes
-        - basis_risk_flag
-        - requires_manual_review
-        - status
+      required: [evaluationId, eventId, programId, enrollmentId, triggerMet, reasonCodes, requiresManualReview, basisRiskFlag, severityScore, ruleVersion, status, createdAt]
       properties:
-        evaluation_id:
-          type: string
-        event_id:
-          type: string
-        program_id:
-          type: string
-        rule_version:
-          type: string
-        trigger_met:
-          type: boolean
-        reason_codes:
+        evaluationId: { type: string }
+        eventId: { type: string }
+        programId: { type: string }
+        enrollmentId: { type: string }
+        triggerMet: { type: boolean }
+        reasonCodes:
           type: array
-          items:
-            type: string
-        basis_risk_flag:
-          type: boolean
-        requires_manual_review:
-          type: boolean
+          items: { type: string }
+        requiresManualReview: { type: boolean }
+        basisRiskFlag: { type: boolean }
+        severityScore: { type: number }
+        ruleVersion: { type: string }
         status:
           type: string
           enum: [EVALUATED, REVIEW_REQUIRED]
-    PayoutSimulationRequest:
-      type: object
-      required: [evaluation_id, event_id, program_id]
-      properties:
-        evaluation_id:
-          type: string
-        event_id:
-          type: string
-        program_id:
-          type: string
+        createdAt: { type: string, format: date-time }
+
     PayoutDecision:
       type: object
-      required:
-        - decision_id
-        - evaluation_id
-        - event_id
-        - program_id
-        - rule_version
-        - recommended_amount
-        - currency
-        - basis_risk_flag
-        - requires_manual_review
-        - appeal_window_days
-        - status
+      required: [decisionId, evaluationId, eventId, programId, enrollmentId, payoutAmount, payoutCap, currency, requiresManualReview, basisRiskFlag, status, ruleVersion, rationale]
       properties:
-        decision_id:
-          type: string
-        evaluation_id:
-          type: string
-        event_id:
-          type: string
-        program_id:
-          type: string
-        rule_version:
-          type: string
-        recommended_amount:
-          type: number
-          minimum: 0
-        currency:
-          type: string
-          minLength: 3
-          maxLength: 3
-        basis_risk_flag:
-          type: boolean
-        requires_manual_review:
-          type: boolean
-        appeal_window_days:
-          type: integer
-          minimum: 1
+        decisionId: { type: string }
+        evaluationId: { type: string }
+        eventId: { type: string }
+        programId: { type: string }
+        enrollmentId: { type: string }
+        payoutAmount: { type: number }
+        payoutCap: { type: number }
+        currency: { type: string }
+        requiresManualReview: { type: boolean }
+        basisRiskFlag: { type: boolean }
         status:
           type: string
-          enum: [SIMULATED, REVIEW_REQUIRED, FINALIZED]
-    PublicReport:
+          enum: [DRAFT, APPROVED, HELD, REJECTED]
+        approvedBy: { type: string }
+        approvedAt: { type: string, format: date-time }
+        ruleVersion: { type: string }
+        rationale:
+          type: array
+          items: { type: string }
+
+    PayoutExportBatch:
       type: object
-      required: [event_id, program_id, rule_version, status, generated_at]
+      required: [exportId, programId, decisionIds, generatedAt, target, signature, status]
       properties:
-        event_id:
-          type: string
-        program_id:
-          type: string
-        rule_version:
-          type: string
+        exportId: { type: string }
+        programId: { type: string }
+        decisionIds:
+          type: array
+          items: { type: string }
+        generatedAt: { type: string, format: date-time }
+        target: { type: string }
+        signature: { type: string }
         status:
           type: string
-        generated_at:
+          enum: [GENERATED, SENT, FAILED]
+
+    BasisRiskSnapshot:
+      type: object
+      required: [programId, eventId, expectedGap, avgPayout, avgReportedLoss, flaggedCases, generatedAt]
+      properties:
+        programId: { type: string }
+        eventId: { type: string }
+        expectedGap: { type: number }
+        avgPayout: { type: number }
+        avgReportedLoss: { type: number }
+        flaggedCases: { type: integer }
+        generatedAt: { type: string, format: date-time }
+
+    AuditLogEntry:
+      type: object
+      required: [auditId, actorId, actorRole, action, entityType, entityId, hash, createdAt]
+      properties:
+        auditId: { type: string }
+        actorId: { type: string }
+        actorRole: { type: string }
+        action: { type: string }
+        entityType: { type: string }
+        entityId: { type: string }
+        hash: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    CaseRecord:
+      type: object
+      required: [caseId, programId, eventId, enrollmentId, decisionId, severity, status, reason, createdAt]
+      properties:
+        caseId: { type: string }
+        programId: { type: string }
+        eventId: { type: string }
+        enrollmentId: { type: string }
+        decisionId: { type: string }
+        severity:
           type: string
-          format: date-time
-        totals:
-          type: object
-          additionalProperties:
-            type: number
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        status:
+          type: string
+          enum: [OPEN, UNDER_REVIEW, RESOLVED]
+        reason: { type: string }
+        createdAt: { type: string, format: date-time }

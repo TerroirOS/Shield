@@ -1,0 +1,47 @@
+{
+  "realm": "shield",
+  "enabled": true,
+  "roles": {
+    "realm": [
+      { "name": "ops" },
+      { "name": "auditor" },
+      { "name": "admin" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "shield-api",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "webOrigins": ["*"],
+      "redirectUris": ["*"]
+    },
+    {
+      "clientId": "shield-dashboard",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "webOrigins": ["*"],
+      "redirectUris": ["*"]
+    }
+  ],
+  "users": [
+    {
+      "username": "ops-admin",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "ops-admin", "temporary": false }],
+      "realmRoles": ["admin", "ops"]
+    },
+    {
+      "username": "auditor",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "auditor", "temporary": false }],
+      "realmRoles": ["auditor"]
+    }
+  ]
+}

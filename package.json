@@ -1,11 +1,33 @@
 {
-  "name": "terroiros-shield-docs",
+  "name": "terroiros-shield",
   "private": true,
   "version": "0.1.0",
-  "description": "Documentation and specification foundation for Terroir Shield",
+  "description": "Terroir Shield v1 monorepo",
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
+    "postinstall": "npm-run-all build:domain build:connectors build:ui",
+    "dev": "npm-run-all --parallel dev:api dev:worker dev:dashboard",
+    "dev:api": "npm run dev --workspace @terroiros/shield-api",
+    "dev:worker": "npm run dev --workspace @terroiros/shield-worker",
+    "dev:dashboard": "npm run dev --workspace @terroiros/shield-dashboard",
+    "build": "npm-run-all build:domain build:connectors build:ui build:api build:worker build:dashboard",
+    "build:domain": "npm run build --workspace @terroiros/domain",
+    "build:connectors": "npm run build --workspace @terroiros/connectors",
+    "build:ui": "npm run build --workspace @terroiros/ui",
+    "build:api": "npm run build --workspace @terroiros/shield-api",
+    "build:worker": "npm run build --workspace @terroiros/shield-worker",
+    "build:dashboard": "npm run build --workspace @terroiros/shield-dashboard",
+    "test": "npm-run-all test:domain test:api",
+    "test:domain": "npm run test --workspace @terroiros/domain",
+    "test:api": "npm run test --workspace @terroiros/shield-api",
+    "lint:md": "markdownlint-cli2 \"**/*.md\" \"#**/node_modules\"",
     "lint:links": "node scripts/check-local-links.mjs",
     "lint:openapi": "redocly lint spec/openapi/shield-api.v1.yaml",
     "validate:schemas": "ajv validate -c ajv-formats -s spec/schemas/climate-event.schema.json -d spec/examples/climate-event.sample.json --spec=draft2020 && ajv validate -c ajv-formats -s spec/schemas/payout-decision.schema.json -d spec/examples/payout-decision.sample.json --spec=draft2020",
@@ -13,8 +35,17 @@
   },
   "devDependencies": {
     "@redocly/cli": "^2.0.8",
+    "@types/node": "^22.13.11",
+    "@types/pg": "^8.11.11",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
     "ajv-cli": "^5.0.0",
+    "ajv-formats": "^3.0.1",
     "markdownlint-cli2": "^0.18.1",
-    "ajv-formats": "^3.0.1"
+    "npm-run-all": "^4.1.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsx": "^4.20.5",
+    "typescript": "^5.8.2"
   }
 }
