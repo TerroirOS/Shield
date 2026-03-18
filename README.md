@@ -25,7 +25,7 @@ This repository now includes a working v1 local stack:
 ## Quick Start
 
 ```bash
-cp .env.example .env
+npm run bootstrap:local
 npm install
 docker compose up --build
 ```
@@ -43,12 +43,16 @@ Services:
 ## Local Development (without Docker for app code)
 
 ```bash
-cp .env.example .env
+npm run bootstrap:local
 npm install
 npm run dev
 ```
 
 This runs API (`:8080`), worker, and dashboard (`:3000`) in parallel.
+
+## Environment Contract
+
+`npm run bootstrap:local` creates `.env` from `.env.example` when needed, validates the required local stack variables, and prints the expected service endpoints before you start Docker or the app workspaces.
 
 ## API Surface (v1)
 
