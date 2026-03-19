@@ -27,6 +27,8 @@ This repository now includes a working v1 local stack:
 ```bash
 npm run bootstrap:local
 npm install
+npm run build
+npm test
 docker compose up --build
 ```
 
@@ -52,7 +54,9 @@ This runs API (`:8080`), worker, and dashboard (`:3000`) in parallel.
 
 ## Environment Contract
 
-`npm run bootstrap:local` creates `.env` from `.env.example` when needed, validates the required local stack variables, and prints the expected service endpoints before you start Docker or the app workspaces.
+`npm run bootstrap:local` creates `.env` from `.env.example` when needed, validates the required local stack variables, and prints the expected service endpoints plus a local tooling summary before you start Docker or the app workspaces.
+
+`npm run check:tooling` verifies that the cached root packages required for the monorepo (`typescript`, `tsx`, `next`, `react`, `react-dom`) are actually present before build or test runs start.
 
 ## API Surface (v1)
 
