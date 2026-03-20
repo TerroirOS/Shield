@@ -58,6 +58,8 @@ This runs API (`:8080`), worker, and dashboard (`:3000`) in parallel.
 
 `npm run check:tooling` verifies that the cached root packages required for the monorepo (`typescript`, `tsx`, `next`, `react`, `react-dom`) are actually present before build or test runs start.
 
+`npm run audit:boundaries` enforces the intended workspace dependency graph across `apps/api`, `apps/worker`, `apps/dashboard`, `packages/domain`, `packages/connectors`, and `packages/ui`. Build, test, and validate runs now execute that audit automatically.
+
 ## API Surface (v1)
 
 - `POST /v1/events/weather`
@@ -73,6 +75,7 @@ This runs API (`:8080`), worker, and dashboard (`:3000`) in parallel.
 ## Docs + Specs
 
 - [Documentation Index](docs/index.md)
+- [Workspace Boundaries](docs/workspace-boundaries.md)
 - [OpenAPI v1](spec/openapi/shield-api.v1.yaml)
 - [JSON Schemas](spec/schemas/)
 

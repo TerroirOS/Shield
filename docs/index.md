@@ -6,6 +6,7 @@ Status: Planned / not launched.
 
 - [Overview](overview.md)
 - [Architecture](architecture.md)
+- [Workspace Boundaries](workspace-boundaries.md)
 - [Domain Model](domain-model.md)
 - [Event Lifecycle](event-lifecycle.md)
 - [Trigger and Payout Logic](trigger-payout-logic.md)
