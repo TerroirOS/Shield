@@ -56,9 +56,13 @@ This runs API (`:8080`), worker, and dashboard (`:3000`) in parallel.
 
 `npm run bootstrap:local` creates `.env` from `.env.example` when needed, validates the required local stack variables, and prints the expected service endpoints plus a local tooling summary before you start Docker or the app workspaces.
 
+`npm run check:env-contract` verifies that `.env.example` covers the full local stack contract for Postgres, Redis, MinIO, Keycloak/OIDC, worker auth, connector modes/targets, and observability endpoints. When a local `.env` exists, it validates that file against the same contract.
+
 `npm run check:tooling` verifies that the cached root packages required for the monorepo (`typescript`, `tsx`, `next`, `react`, `react-dom`) are actually present before build or test runs start.
 
 `npm run audit:boundaries` enforces the intended workspace dependency graph across `apps/api`, `apps/worker`, `apps/dashboard`, `packages/domain`, `packages/connectors`, and `packages/ui`. Build, test, and validate runs now execute that audit automatically.
+
+See [Environment Contract](docs/environment-contract.md) for the required variables and intended local defaults.
 
 ## API Surface (v1)
 
@@ -75,6 +79,7 @@ This runs API (`:8080`), worker, and dashboard (`:3000`) in parallel.
 ## Docs + Specs
 
 - [Documentation Index](docs/index.md)
+- [Environment Contract](docs/environment-contract.md)
 - [Workspace Boundaries](docs/workspace-boundaries.md)
 - [OpenAPI v1](spec/openapi/shield-api.v1.yaml)
 - [JSON Schemas](spec/schemas/)

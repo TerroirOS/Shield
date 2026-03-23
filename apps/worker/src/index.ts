@@ -1,13 +1,7 @@
-import dotenv from "dotenv";
 import { Worker } from "bullmq";
+import { config } from "./config.js";
 
-dotenv.config({ path: process.env.DOTENV_CONFIG_PATH ?? ".env" });
-
-const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
-const apiBaseUrl = process.env.API_BASE_URL ?? "http://localhost:8080";
-const internalToken = process.env.INTERNAL_JOB_TOKEN ?? "dev-internal-token";
-
-const parsed = new URL(redisUrl);
+const parsed = new URL(config.REDIS_URL);
 const connection = {
   host: parsed.hostname,
   port: Number(parsed.port || 6379),
@@ -20,11 +14,11 @@ const evaluateWorker = new Worker(
   async (job) => {
     const payload = job.data as { eventId: string; programId: string };
 
-    const response = await fetch(`${apiBaseUrl}/v1/internal/jobs/evaluate`, {
+    const response = await fetch(`${config.API_BASE_URL}/v1/internal/jobs/evaluate`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-internal-token": internalToken
+        "x-internal-token": config.INTERNAL_JOB_TOKEN
       },
       body: JSON.stringify({ eventId: payload.eventId, programId: payload.programId })
     });

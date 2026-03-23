@@ -1,56 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { parseEnvFile, validateEntries } from "./env-contract.mjs";
+
 const repoRoot = process.cwd();
 const envExamplePath = path.join(repoRoot, ".env.example");
 const envPath = path.join(repoRoot, ".env");
 const pathEntries = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean);
-
-const requiredKeys = [
-  "SHIELD_RUNTIME_MODE",
-  "API_PORT",
-  "DATABASE_URL",
-  "REDIS_URL",
-  "MINIO_ENDPOINT",
-  "MINIO_ACCESS_KEY",
-  "MINIO_SECRET_KEY",
-  "MINIO_BUCKET",
-  "INTERNAL_JOB_TOKEN",
-  "API_BASE_URL",
-  "OIDC_ISSUER_URL",
-  "OIDC_JWKS_URI",
-  "OIDC_AUDIENCE",
-  "AUTH_DEV_MODE",
-  "NEXT_PUBLIC_API_URL",
-  "TRACE_API_URL",
-  "WEATHER_PROVIDER",
-  "COMMITMENT_RPC_URL",
-  "TREASURY_EXPORT_TARGET",
-  "NOTIFICATION_TARGET"
-];
-
-function parseEnvFile(filePath) {
-  const content = fs.readFileSync(filePath, "utf8");
-  const entries = {};
-
-  for (const rawLine of content.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#")) {
-      continue;
-    }
-
-    const separatorIndex = line.indexOf("=");
-    if (separatorIndex === -1) {
-      continue;
-    }
-
-    const key = line.slice(0, separatorIndex).trim();
-    const value = line.slice(separatorIndex + 1).trim().replace(/^['"]|['"]$/g, "");
-    entries[key] = value;
-  }
-
-  return entries;
-}
 
 function ensureEnvFile() {
   if (fs.existsSync(envPath)) {
@@ -88,24 +44,12 @@ function summarizeTooling() {
 }
 
 function validateEnv(entries) {
-  const missing = requiredKeys.filter((key) => !entries[key]);
-
-  if (missing.length > 0) {
-    console.error("Shield local bootstrap failed: missing required environment keys.");
-    for (const key of missing) {
-      console.error(`- ${key}`);
+  const result = validateEntries(entries, ".env");
+  if (!result.ok) {
+    console.error("Shield local bootstrap failed: environment contract validation failed.");
+    for (const problem of result.problems) {
+      console.error(`- ${problem}`);
     }
-    process.exit(1);
-  }
-
-  const validRuntimeModes = new Set(["MOCK", "HYBRID", "TESTNET"]);
-  if (!validRuntimeModes.has(entries.SHIELD_RUNTIME_MODE)) {
-    console.error("SHIELD_RUNTIME_MODE must be one of: MOCK, HYBRID, TESTNET.");
-    process.exit(1);
-  }
-
-  if (!["true", "false"].includes(entries.AUTH_DEV_MODE)) {
-    console.error("AUTH_DEV_MODE must be set to true or false.");
     process.exit(1);
   }
 }
@@ -120,6 +64,9 @@ function printSummary(entries, createdEnvFile, tooling) {
   console.log(`- Redis URL: ${entries.REDIS_URL}`);
   console.log(`- Keycloak issuer: ${entries.OIDC_ISSUER_URL}`);
   console.log(`- MinIO endpoint: ${entries.MINIO_ENDPOINT}`);
+  console.log(`- OTel collector: ${entries.OTEL_EXPORTER_OTLP_ENDPOINT}`);
+  console.log(`- Prometheus URL: ${entries.PROMETHEUS_URL}`);
+  console.log(`- Grafana URL: ${entries.GRAFANA_URL}`);
   console.log(`- npm on PATH: ${tooling.npmAvailable ? "yes" : "no"}`);
   console.log(`- Docker on PATH: ${tooling.dockerAvailable ? "yes" : "no"}`);
   console.log(

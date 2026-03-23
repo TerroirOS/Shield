@@ -6,6 +6,7 @@ Status: Planned / not launched.
 
 - [Overview](overview.md)
 - [Architecture](architecture.md)
+- [Environment Contract](environment-contract.md)
 - [Workspace Boundaries](workspace-boundaries.md)
 - [Domain Model](domain-model.md)
 - [Event Lifecycle](event-lifecycle.md)
