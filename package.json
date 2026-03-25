@@ -18,6 +18,7 @@
     "dev:api": "npm run dev --workspace @terroiros/shield-api",
     "dev:worker": "npm run dev --workspace @terroiros/shield-worker",
     "dev:dashboard": "npm run dev --workspace @terroiros/shield-dashboard",
+    "seed:dev-data": "npm run seed:dev-data --workspace @terroiros/shield-api",
     "build": "npm run check:tooling && npm run audit:boundaries && npm run build:domain && npm run build:connectors && npm run build:ui && npm run build:api && npm run build:worker && npm run build:dashboard",
     "build:domain": "npm run build --workspace @terroiros/domain",
     "build:connectors": "npm run build --workspace @terroiros/connectors",

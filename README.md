@@ -30,6 +30,7 @@ npm install
 npm run build
 npm test
 docker compose up --build
+npm run seed:dev-data
 ```
 
 Services:
@@ -61,6 +62,8 @@ This runs API (`:8080`), worker, and dashboard (`:3000`) in parallel.
 `npm run check:tooling` verifies that the cached root packages required for the monorepo (`typescript`, `tsx`, `next`, `react`, `react-dom`) are actually present before build or test runs start.
 
 `npm run audit:boundaries` enforces the intended workspace dependency graph across `apps/api`, `apps/worker`, `apps/dashboard`, `packages/domain`, `packages/connectors`, and `packages/ui`. Build, test, and validate runs now execute that audit automatically.
+
+`npm run seed:dev-data` loads deterministic developer records into Postgres for two demo programs, including enrollments, weather events, evaluations, payout decisions, cases, basis-risk snapshots, audit entries, and a payout export. It is safe to rerun because the script clears and rebuilds only those seeded programs.
 
 See [Environment Contract](docs/environment-contract.md) for the required variables and intended local defaults.
 

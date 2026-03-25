@@ -6,7 +6,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "test": "tsx --test src/**/*.test.ts"
+    "test": "tsx --test src/**/*.test.ts",
+    "seed:dev-data": "node scripts/seed-dev-data.mjs"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",

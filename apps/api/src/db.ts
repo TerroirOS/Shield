@@ -206,6 +206,19 @@ export class Db {
     await this.saveBasisRiskSnapshot(seedSnapshot);
   }
 
+  async deleteProgramData(programId: string): Promise<void> {
+    await this.pool.query("DELETE FROM payout_exports WHERE payload->>'programId' = $1", [programId]);
+    await this.pool.query("DELETE FROM audit_log WHERE payload->>'entityId' IN (SELECT decision_id FROM decisions WHERE program_id = $1)", [programId]);
+    await this.pool.query("DELETE FROM audit_log WHERE payload->>'entityId' IN (SELECT event_id FROM events WHERE program_id = $1)", [programId]);
+    await this.pool.query("DELETE FROM basis_risk_snapshots WHERE program_id = $1", [programId]);
+    await this.pool.query("DELETE FROM cases WHERE program_id = $1", [programId]);
+    await this.pool.query("DELETE FROM decisions WHERE program_id = $1", [programId]);
+    await this.pool.query("DELETE FROM evaluations WHERE event_id IN (SELECT event_id FROM events WHERE program_id = $1)", [programId]);
+    await this.pool.query("DELETE FROM events WHERE program_id = $1", [programId]);
+    await this.pool.query("DELETE FROM enrollments WHERE program_id = $1", [programId]);
+    await this.pool.query("DELETE FROM programs WHERE program_id = $1", [programId]);
+  }
+
   async saveProgram(program: ProgramConfig): Promise<void> {
     await this.pool.query(
       `INSERT INTO programs (program_id, payload)
