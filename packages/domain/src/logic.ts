@@ -3,6 +3,7 @@ import type {
   BasisRiskSnapshot,
   PayoutDecision,
   PayoutPreviewInput,
+  TriggerReasonCode,
   TriggerEvaluation,
   TriggerEvaluationInput
 } from "./types.js";
@@ -13,7 +14,7 @@ function round2(value: number): number {
 
 export function evaluateTrigger(input: TriggerEvaluationInput): TriggerEvaluation {
   const { event, program, enrollment } = input;
-  const reasonCodes: string[] = [];
+  const reasonCodes: TriggerReasonCode[] = [];
   let triggerMet = false;
 
   if (event.hailIntensity >= program.thresholds.hailThreshold) {

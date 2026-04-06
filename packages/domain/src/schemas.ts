@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { caseSeverities, caseStatuses, hazardTypes } from "./types.js";
 
 export const weatherEventPacketSchema = z.object({
   eventId: z.string().min(3),
   programId: z.string().min(3),
-  hazardType: z.enum(["HAIL", "FROST", "DROUGHT"]),
+  hazardType: z.enum(hazardTypes),
   observedAt: z.string().datetime(),
   hailIntensity: z.number().min(0),
   frostIndicator: z.number().min(0).max(1),
@@ -24,7 +25,7 @@ export const payoutPreviewRequestSchema = z.object({
 });
 
 export const caseFilterSchema = z.object({
-  status: z.enum(["OPEN", "UNDER_REVIEW", "RESOLVED"]).optional(),
-  severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
+  status: z.enum(caseStatuses).optional(),
+  severity: z.enum(caseSeverities).optional(),
   programId: z.string().optional()
 });

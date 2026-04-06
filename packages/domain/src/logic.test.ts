@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { caseSeverities, caseStatuses, hazardTypes, triggerReasonCodes } from "./types.js";
 import { calculateBasisRiskSnapshot, computePayout, evaluateTrigger } from "./logic.js";
+import { caseFilterSchema, weatherEventPacketSchema } from "./schemas.js";
 import type { EnrollmentRecord, ProgramConfig, WeatherEventPacket } from "./types.js";
 
 const program: ProgramConfig = {
@@ -45,7 +47,7 @@ const eventPacket: WeatherEventPacket = {
   minTemperature: 2,
   droughtIndex: 0.4,
   source: "mock",
-  signature: "sig"
+  signature: "sig-valid"
 };
 
 test("evaluateTrigger flags hail threshold", () => {
@@ -70,4 +72,19 @@ test("basis risk snapshot computes expected gap", () => {
   });
   assert.equal(snapshot.expectedGap, 50);
   assert.equal(snapshot.flaggedCases >= 0, true);
+});
+
+test("contract enum exports remain aligned with supported statuses", () => {
+  assert.deepEqual(hazardTypes, ["HAIL", "FROST", "DROUGHT"]);
+  assert.deepEqual(caseStatuses, ["OPEN", "UNDER_REVIEW", "RESOLVED"]);
+  assert.deepEqual(caseSeverities, ["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
+  assert.equal(triggerReasonCodes.includes("LOW_TRUST_ENROLLMENT"), true);
+});
+
+test("schemas consume normalized contract enums", () => {
+  const packet = weatherEventPacketSchema.parse(eventPacket);
+  const filters = caseFilterSchema.parse({ status: "OPEN", severity: "HIGH", programId: "program-kakheti-2026" });
+
+  assert.equal(packet.hazardType, "HAIL");
+  assert.deepEqual(filters, { status: "OPEN", severity: "HIGH", programId: "program-kakheti-2026" });
 });
