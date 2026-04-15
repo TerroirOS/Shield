@@ -50,17 +50,25 @@ const eventPacket: WeatherEventPacket = {
   signature: "sig-valid"
 };
 
+const deterministicRuntime = {
+  now: () => "2026-03-10T12:34:56.000Z",
+  randomId: () => "fixed-id-123"
+};
+
 test("evaluateTrigger flags hail threshold", () => {
-  const evaluation = evaluateTrigger({ event: eventPacket, program, enrollment });
+  const evaluation = evaluateTrigger({ event: eventPacket, program, enrollment }, deterministicRuntime);
   assert.equal(evaluation.triggerMet, true);
   assert.equal(evaluation.reasonCodes.includes("HAIL_THRESHOLD_MET"), true);
   assert.equal(evaluation.status, "EVALUATED");
+  assert.equal(evaluation.evaluationId, "fixed-id-123");
+  assert.equal(evaluation.createdAt, "2026-03-10T12:34:56.000Z");
 });
 
 test("computePayout respects cap", () => {
-  const evaluation = evaluateTrigger({ event: eventPacket, program, enrollment });
-  const decision = computePayout({ evaluation, event: eventPacket, program, enrollment });
+  const evaluation = evaluateTrigger({ event: eventPacket, program, enrollment }, deterministicRuntime);
+  const decision = computePayout({ evaluation, event: eventPacket, program, enrollment }, deterministicRuntime);
   assert.equal(decision.payoutAmount <= program.payoutCap, true);
+  assert.equal(decision.decisionId, "fixed-id-123");
 });
 
 test("basis risk snapshot computes expected gap", () => {
@@ -69,9 +77,10 @@ test("basis risk snapshot computes expected gap", () => {
     eventId: "e1",
     payouts: [100, 100],
     losses: [200, 100]
-  });
+  }, deterministicRuntime);
   assert.equal(snapshot.expectedGap, 50);
   assert.equal(snapshot.flaggedCases >= 0, true);
+  assert.equal(snapshot.generatedAt, "2026-03-10T12:34:56.000Z");
 });
 
 test("contract enum exports remain aligned with supported statuses", () => {
@@ -87,4 +96,48 @@ test("schemas consume normalized contract enums", () => {
 
   assert.equal(packet.hazardType, "HAIL");
   assert.deepEqual(filters, { status: "OPEN", severity: "HIGH", programId: "program-kakheti-2026" });
+});
+
+test("evaluateTrigger treats exact threshold boundaries as deterministic hits", () => {
+  const evaluation = evaluateTrigger({
+    event: {
+      ...eventPacket,
+      hailIntensity: program.thresholds.hailThreshold,
+      frostIndicator: program.thresholds.frostThreshold,
+      minTemperature: program.thresholds.minTemperatureThreshold,
+      droughtIndex: program.thresholds.droughtThreshold
+    },
+    program,
+    enrollment
+  }, deterministicRuntime);
+
+  assert.deepEqual(evaluation.reasonCodes, [
+    "HAIL_THRESHOLD_MET",
+    "FROST_THRESHOLD_MET",
+    "MIN_TEMP_THRESHOLD_MET",
+    "DROUGHT_THRESHOLD_MET"
+  ]);
+  assert.equal(evaluation.triggerMet, true);
+});
+
+test("evaluateTrigger keeps no-trigger outcomes reviewable for low-trust enrollments", () => {
+  const evaluation = evaluateTrigger({
+    event: {
+      ...eventPacket,
+      hailIntensity: 0.59,
+      frostIndicator: 0.5,
+      minTemperature: 2,
+      droughtIndex: 0.69
+    },
+    program,
+    enrollment: {
+      ...enrollment,
+      trustTier: "SELF_ATTESTED"
+    }
+  }, deterministicRuntime);
+
+  assert.deepEqual(evaluation.reasonCodes, ["NO_TRIGGER", "LOW_TRUST_ENROLLMENT"]);
+  assert.equal(evaluation.triggerMet, false);
+  assert.equal(evaluation.requiresManualReview, true);
+  assert.equal(evaluation.status, "REVIEW_REQUIRED");
 });

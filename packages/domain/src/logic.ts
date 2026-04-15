@@ -8,31 +8,54 @@ import type {
   TriggerEvaluationInput
 } from "./types.js";
 
+const FLOAT_TOLERANCE = 1e-9;
+
+export interface LogicRuntime {
+  now?: () => string;
+  randomId?: () => string;
+}
+
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-export function evaluateTrigger(input: TriggerEvaluationInput): TriggerEvaluation {
+function gteWithTolerance(value: number, threshold: number): boolean {
+  return value > threshold || Math.abs(value - threshold) <= FLOAT_TOLERANCE;
+}
+
+function lteWithTolerance(value: number, threshold: number): boolean {
+  return value < threshold || Math.abs(value - threshold) <= FLOAT_TOLERANCE;
+}
+
+function getNow(runtime?: LogicRuntime): string {
+  return runtime?.now?.() ?? new Date().toISOString();
+}
+
+function getRandomId(runtime?: LogicRuntime): string {
+  return runtime?.randomId?.() ?? crypto.randomUUID();
+}
+
+export function evaluateTrigger(input: TriggerEvaluationInput, runtime?: LogicRuntime): TriggerEvaluation {
   const { event, program, enrollment } = input;
   const reasonCodes: TriggerReasonCode[] = [];
   let triggerMet = false;
 
-  if (event.hailIntensity >= program.thresholds.hailThreshold) {
+  if (gteWithTolerance(event.hailIntensity, program.thresholds.hailThreshold)) {
     reasonCodes.push("HAIL_THRESHOLD_MET");
     triggerMet = true;
   }
 
-  if (event.frostIndicator >= program.thresholds.frostThreshold) {
+  if (gteWithTolerance(event.frostIndicator, program.thresholds.frostThreshold)) {
     reasonCodes.push("FROST_THRESHOLD_MET");
     triggerMet = true;
   }
 
-  if (event.minTemperature <= program.thresholds.minTemperatureThreshold) {
+  if (lteWithTolerance(event.minTemperature, program.thresholds.minTemperatureThreshold)) {
     reasonCodes.push("MIN_TEMP_THRESHOLD_MET");
     triggerMet = true;
   }
 
-  if (event.droughtIndex >= program.thresholds.droughtThreshold) {
+  if (gteWithTolerance(event.droughtIndex, program.thresholds.droughtThreshold)) {
     reasonCodes.push("DROUGHT_THRESHOLD_MET");
     triggerMet = true;
   }
@@ -55,7 +78,7 @@ export function evaluateTrigger(input: TriggerEvaluationInput): TriggerEvaluatio
     enrollment.trustTier === "SELF_ATTESTED" || severityScore >= 1.2;
 
   return {
-    evaluationId: crypto.randomUUID(),
+    evaluationId: getRandomId(runtime),
     eventId: event.eventId,
     programId: program.programId,
     enrollmentId: enrollment.enrollmentId,
@@ -66,11 +89,11 @@ export function evaluateTrigger(input: TriggerEvaluationInput): TriggerEvaluatio
     severityScore,
     ruleVersion: program.ruleVersion,
     status: requiresManualReview ? "REVIEW_REQUIRED" : "EVALUATED",
-    createdAt: new Date().toISOString()
+    createdAt: getNow(runtime)
   };
 }
 
-export function computePayout(input: PayoutPreviewInput): PayoutDecision {
+export function computePayout(input: PayoutPreviewInput, runtime?: LogicRuntime): PayoutDecision {
   const { evaluation, event, program, enrollment } = input;
 
   const weightedImpact =
@@ -91,7 +114,7 @@ export function computePayout(input: PayoutPreviewInput): PayoutDecision {
   }
 
   return {
-    decisionId: crypto.randomUUID(),
+    decisionId: getRandomId(runtime),
     evaluationId: evaluation.evaluationId,
     eventId: event.eventId,
     programId: program.programId,
@@ -112,7 +135,7 @@ export function calculateBasisRiskSnapshot(input: {
   eventId: string;
   payouts: number[];
   losses: number[];
-}): BasisRiskSnapshot {
+}, runtime?: LogicRuntime): BasisRiskSnapshot {
   const payoutCount = input.payouts.length;
   const lossCount = input.losses.length;
   const size = Math.max(payoutCount, lossCount, 1);
@@ -141,6 +164,6 @@ export function calculateBasisRiskSnapshot(input: {
     avgPayout: round2(avgPayout),
     avgReportedLoss: round2(avgReportedLoss),
     flaggedCases,
-    generatedAt: new Date().toISOString()
+    generatedAt: getNow(runtime)
   };
 }
